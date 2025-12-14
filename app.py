@@ -4,27 +4,61 @@ import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
-from dotenv import load_dotenv  # <--- Import this to read .env files
+from dotenv import load_dotenv
 
-# 1. Load the secret .env file
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-# Allow CORS so React can talk to Python
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- API KEY CONFIGURATION ---
-# Get key securely from environment variables.
-# This prevents hackers from seeing your key on GitHub.
 api_key = os.getenv("GOOGLE_API_KEY")
 
 if not api_key:
-    print("❌ CRITICAL ERROR: API Key not found! Make sure you created a '.env' file with GOOGLE_API_KEY inside.")
+    # If .env fails, paste your key here for testing
+    api_key = "AIzaSy_YOUR_KEY_HERE"
 
 genai.configure(api_key=api_key)
 
-# Use the stable Gemini 1.5 Flash model
-model = genai.GenerativeModel('gemini-1.5-flash')
+# --- CRITICAL FIX: AUTO-DETECT MODEL ---
+def find_best_model():
+    """
+    Asks Google: 'What models do I have access to?'
+    And picks the best one for images.
+    """
+    print("🔍 Scanning your API key for available models...")
+    try:
+        # Get all models your key can see
+        all_models = list(genai.list_models())
+        
+        # 1. Look for Flash (Fastest)
+        for m in all_models:
+            if 'flash' in m.name and 'generateContent' in m.supported_generation_methods:
+                print(f"✅ FOUND FLASH: {m.name}")
+                return genai.GenerativeModel(m.name)
+        
+        # 2. Look for Pro (Smarter)
+        for m in all_models:
+            if 'pro' in m.name and 'vision' not in m.name and 'generateContent' in m.supported_generation_methods:
+                print(f"✅ FOUND PRO: {m.name}")
+                return genai.GenerativeModel(m.name)
+
+        # 3. Look for Legacy Vision (Old Reliable)
+        for m in all_models:
+            if 'vision' in m.name and 'generateContent' in m.supported_generation_methods:
+                print(f"✅ FOUND LEGACY VISION: {m.name}")
+                return genai.GenerativeModel(m.name)
+
+    except Exception as e:
+        print(f"⚠️ Could not list models (Error: {e})")
+
+    # 4. If all else fails, force the specific ID that usually works
+    print("⚠️ Auto-detect failed. Forcing 'gemini-1.5-flash-001'")
+    return genai.GenerativeModel('gemini-1.5-flash-001')
+
+# Initialize the model using the auto-finder
+model = find_best_model()
 
 @app.route('/convert', methods=['POST'])
 def convert():
@@ -38,7 +72,6 @@ def convert():
     try:
         image = Image.open(file)
 
-        # Prompt Gemini to return JSON data
         prompt = """
         Analyze this image (table, receipt, or whiteboard). 
         Extract the tabular data into this exact JSON structure:
@@ -55,16 +88,13 @@ def convert():
 
         response = model.generate_content([prompt, image])
         
-        # Clean up if Gemini adds ```json ... ```
         cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
         
-        # Parse text into real JSON
         try:
             data = json.loads(cleaned_text)
         except json.JSONDecodeError:
-            # Fallback if AI returns bad JSON
-            print(f"Bad JSON received: {cleaned_text}")
-            return jsonify({"error": "AI failed to generate valid data. Try a clearer image."}), 500
+            print(f"AI Output (Not JSON): {cleaned_text}")
+            return jsonify({"error": "AI could not read the table. Try a clearer image."}), 500
         
         return jsonify(data)
 
