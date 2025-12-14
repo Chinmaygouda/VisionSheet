@@ -5,7 +5,7 @@
 VisionSheet uses **Google Gemini 1.5 Flash** to extract data from handwritten notes, receipts, and whiteboards, converting them into formatted, downloadable Excel files.
 
 ![VisionSheet Demo](image.png)
-*(Tip: Replace this link with a screenshot of your 3D Robot UI later!)*
+
 
 ## 🚀 Key Features
 - **🤖 AI Vision:** Uses Gemini 1.5 Flash to understand complex, messy tables.
