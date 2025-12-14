@@ -1,0 +1,5 @@
+{
+  "name": "VisionSheet",
+  "description": "A modern, AI-powered tool that converts images of tables into editable Excel spreadsheets using Gemini 1.5 Flash.",
+  "requestFramePermissions": []
+}

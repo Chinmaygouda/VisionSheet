@@ -1,0 +1,16 @@
+# Python junk
+venv/
+__pycache__/
+*.pyc
+
+# Node/React junk
+templates/node_modules/
+templates/dist/
+.DS_Store
+
+# Environment variables (Secrets)
+.env
+
+# Editor settings
+.vscode/
+.idea/
