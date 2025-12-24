@@ -1,8 +1,26 @@
 import { ExtractedTableData } from '../types';
 
-export const extractTableFromImage = async (base64: string, fileType: string): Promise<ExtractedTableData> => {
+const getApiUrl = () => {
+  const host = window.location.hostname;
   
-  // Convert Base64 back to file blob to send to Python
+  // 1. Localhost Development
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://127.0.0.1:5000/convert';
+  }
+
+  // 2. Google Cloud Run (Judges)
+  // Cloud Run URLs end in .run.app -> Backend is on same server
+  if (host.includes('run.app')) {
+    return '/convert'; 
+  }
+
+  // 3. Vercel/Public (Users)
+  // Point to Render Backend
+  // REPLACE THIS WITH YOUR RENDER URL LATER
+  return 'https://visionsheet-backend.onrender.com/convert'; 
+};
+
+export const extractTableFromImage = async (base64: string, fileType: string): Promise<ExtractedTableData> => {
   const res = await fetch(base64);
   const blob = await res.blob();
   const file = new File([blob], "image", { type: fileType });
@@ -10,8 +28,7 @@ export const extractTableFromImage = async (base64: string, fileType: string): P
   const formData = new FormData();
   formData.append('file', file);
 
-  // Send to Python
-  const response = await fetch('http://localhost:5000/convert', {
+  const response = await fetch(getApiUrl(), {
     method: 'POST',
     body: formData,
   });
@@ -21,7 +38,5 @@ export const extractTableFromImage = async (base64: string, fileType: string): P
     throw new Error(errorData.error || 'Failed to process image');
   }
 
-  // Get JSON data for preview
-  const data: ExtractedTableData = await response.json();
-  return data;
+  return await response.json();
 };

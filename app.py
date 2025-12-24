@@ -1,67 +1,66 @@
 import os
 import json
+import datetime
 import google.generativeai as genai
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+# Setup App to serve React build files (for Google Cloud)
+app = Flask(__name__, static_folder='templates/dist', static_url_path='/')
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# --- API KEY CONFIGURATION ---
+# --- API KEY & MODEL ---
 api_key = os.getenv("GOOGLE_API_KEY")
-
 if not api_key:
-    # If .env fails, paste your key here for testing
-    api_key = "AIzaSy_YOUR_KEY_HERE"
+    print("❌ ERROR: API Key not found in Environment Variables!")
 
 genai.configure(api_key=api_key)
 
-# --- CRITICAL FIX: AUTO-DETECT MODEL ---
-def find_best_model():
-    """
-    Asks Google: 'What models do I have access to?'
-    And picks the best one for images.
-    """
-    print("🔍 Scanning your API key for available models...")
+def get_model():
+    # Auto-select the best available model
     try:
-        # Get all models your key can see
-        all_models = list(genai.list_models())
-        
-        # 1. Look for Flash (Fastest)
-        for m in all_models:
+        for m in genai.list_models():
             if 'flash' in m.name and 'generateContent' in m.supported_generation_methods:
-                print(f"✅ FOUND FLASH: {m.name}")
                 return genai.GenerativeModel(m.name)
-        
-        # 2. Look for Pro (Smarter)
-        for m in all_models:
-            if 'pro' in m.name and 'vision' not in m.name and 'generateContent' in m.supported_generation_methods:
-                print(f"✅ FOUND PRO: {m.name}")
-                return genai.GenerativeModel(m.name)
-
-        # 3. Look for Legacy Vision (Old Reliable)
-        for m in all_models:
-            if 'vision' in m.name and 'generateContent' in m.supported_generation_methods:
-                print(f"✅ FOUND LEGACY VISION: {m.name}")
-                return genai.GenerativeModel(m.name)
-
-    except Exception as e:
-        print(f"⚠️ Could not list models (Error: {e})")
-
-    # 4. If all else fails, force the specific ID that usually works
-    print("⚠️ Auto-detect failed. Forcing 'gemini-1.5-flash-001'")
+    except:
+        pass
     return genai.GenerativeModel('gemini-1.5-flash-001')
 
-# Initialize the model using the auto-finder
-model = find_best_model()
+model = get_model()
+
+# --- RATE LIMITER (5 Requests/Day/IP) ---
+user_usage = {}
+
+def check_limit(user_ip):
+    today = datetime.date.today().isoformat()
+    if user_ip not in user_usage:
+        user_usage[user_ip] = {'count': 0, 'date': today}
+    
+    user_data = user_usage[user_ip]
+    if user_data['date'] != today:
+        user_data['count'] = 0
+        user_data['date'] = today
+    
+    if user_data['count'] >= 5:
+        return False
+    
+    user_data['count'] += 1
+    return True
 
 @app.route('/convert', methods=['POST'])
 def convert():
+    user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+    if not check_limit(user_ip):
+        return jsonify({
+            "error": "Daily limit reached (5/5). Try again tomorrow!",
+            "limitReached": True
+        }), 429
+
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
@@ -71,36 +70,33 @@ def convert():
 
     try:
         image = Image.open(file)
-
         prompt = """
-        Analyze this image (table, receipt, or whiteboard). 
-        Extract the tabular data into this exact JSON structure:
+        Analyze this image. Extract tabular data into this JSON structure:
         {
-            "headers": ["Column1", "Column2", "Column3"],
-            "rows": [
-                ["Row1-Val1", "Row1-Val2", "Row1-Val3"],
-                ["Row2-Val1", "Row2-Val2", "Row2-Val3"]
-            ],
-            "summary": "A 1-sentence insight about this data."
+            "headers": ["Col1", "Col2"],
+            "rows": [["Val1", "Val2"], ["Val3", "Val4"]],
+            "summary": "1-sentence summary."
         }
-        Return ONLY valid JSON. Do not use Markdown code blocks.
+        CRITICAL: Return empty string "" for blank cells. Do not skip data.
         """
 
         response = model.generate_content([prompt, image])
-        
         cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
-        
-        try:
-            data = json.loads(cleaned_text)
-        except json.JSONDecodeError:
-            print(f"AI Output (Not JSON): {cleaned_text}")
-            return jsonify({"error": "AI could not read the table. Try a clearer image."}), 500
-        
+        data = json.loads(cleaned_text)
         return jsonify(data)
 
     except Exception as e:
-        print(f"Server Error: {e}")
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+# --- SERVE FRONTEND (For Google Cloud) ---
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def static_proxy(path):
+    return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

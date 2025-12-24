@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { extractTableFromImage } from './services/geminiService';
 import { fileToBase64, generateAndDownloadExcel, formatFileSize, parseExcelFile } from './utils/fileHelpers';
 import { ExtractedTableData, ProcessingStatus } from './types';
-import { motion, AnimatePresence, MotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, MotionValue } from 'framer-motion';
 import { 
   CloudArrowUpIcon, 
   TableCellsIcon, 
@@ -142,9 +142,11 @@ const App: React.FC = () => {
             else masterData = mergeTableData(masterData, data);
         }
         setTableData(masterData);
+        setStatus(ProcessingStatus.IDLE);
         setMascotState('success');
     } catch (e) {
         setError("Failed to merge Excel files.");
+        setStatus(ProcessingStatus.ERROR);
         setMascotState('idle');
     }
   };
@@ -154,23 +156,47 @@ const App: React.FC = () => {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files); };
 
+  // --- HYBRID MERGE LOGIC (Updated for Side-by-Side Separator) ---
   const mergeTableData = (existing: ExtractedTableData, newTable: ExtractedTableData): ExtractedTableData => {
-    const allHeaders = [...new Set([...existing.headers, ...newTable.headers])];
-    const expandRows = (rows: string[][], headers: string[], masterHeaders: string[]) => {
-      return rows.map(row => {
-        return masterHeaders.map(h => {
-          const idx = headers.indexOf(h);
-          return idx !== -1 ? row[idx] : "";
+    const headers1 = existing.headers.map(h => h.toLowerCase().trim()).sort().join('|');
+    const headers2 = newTable.headers.map(h => h.toLowerCase().trim()).sort().join('|');
+    
+    // Check if headers match (Vertical Stack)
+    const isSameStructure = headers1 === headers2;
+
+    if (isSameStructure) {
+        // Vertical Merge
+        const reorderedNewRows = newTable.rows.map(row => {
+            return existing.headers.map(targetH => {
+                const idx = newTable.headers.findIndex(h => h.toLowerCase().trim() === targetH.toLowerCase().trim());
+                return idx !== -1 ? row[idx] : "";
+            });
         });
-      });
-    };
-    const expandedExisting = expandRows(existing.rows, existing.headers, allHeaders);
-    const expandedNew = expandRows(newTable.rows, newTable.headers, allHeaders);
-    return {
-      headers: allHeaders,
-      rows: [...expandedExisting, ...expandedNew],
-      summary: existing.summary
-    };
+
+        return {
+            headers: existing.headers,
+            rows: [...existing.rows, ...reorderedNewRows],
+            summary: existing.summary
+        };
+
+    } else {
+        // Horizontal Side-by-Side Merge with Spacer
+        const combinedHeaders = [...existing.headers, "", ...newTable.headers];
+        const maxRows = Math.max(existing.rows.length, newTable.rows.length);
+        const combinedRows: string[][] = [];
+
+        for (let i = 0; i < maxRows; i++) {
+            const leftRow = existing.rows[i] || Array(existing.headers.length).fill("");
+            const rightRow = newTable.rows[i] || Array(newTable.headers.length).fill("");
+            combinedRows.push([...leftRow, "", ...rightRow]);
+        }
+
+        return {
+            headers: combinedHeaders,
+            rows: combinedRows,
+            summary: existing.summary + " | " + (newTable.summary || "New Data")
+        };
+    }
   };
 
   const processQueue = async () => {
@@ -205,7 +231,8 @@ const App: React.FC = () => {
   const prevPreview = () => setViewIndex(prev => (prev - 1 + previewUrls.length) % previewUrls.length);
 
   const handleReset = () => {
-    setFileQueue([]); setPreviewUrls([]); setTableData(null); setStatus(ProcessingStatus.IDLE);
+    setFileQueue([]); setPreviewUrls([]); setTableData(null); 
+    setStatus(ProcessingStatus.IDLE);
     setError(null); setMascotState('idle'); 
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (excelInputRef.current) excelInputRef.current.value = '';
@@ -245,11 +272,13 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="flex-grow container mx-auto px-4 py-6 sm:py-8 flex flex-col items-center relative z-10">
+      {/* Increased Top Padding for Robot */}
+      <main className="flex-grow container mx-auto px-4 pt-14 pb-8 flex flex-col items-center relative z-10">
         
+        {/* Large Title */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-4xl mb-8 relative z-20">
           <div className="relative inline-block">
-            {mascotState === 'idle' && <RoboMascot layoutId="mascot" state={mascotState} className="absolute -top-12 -right-4 w-16 h-16" />}
+            {mascotState === 'idle' && <RoboMascot layoutId="mascot" state={mascotState} className="absolute -top-10 -right-6 w-16 h-16" />}
             <h1 className="text-5xl sm:text-7xl font-bold tracking-tight mb-3 drop-shadow-2xl leading-tight">
               Turn <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Pixels</span> into <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Excel</span>
             </h1>
@@ -258,7 +287,7 @@ const App: React.FC = () => {
         </motion.div>
 
         {/* --- MAIN CONTAINER --- */}
-        <div className={`w-full relative transition-all duration-500 ease-in-out ${(!fileQueue.length && !tableData) ? 'max-w-3xl' : 'max-w-[90rem]'}`}>
+        <div className={`w-full relative transition-all duration-500 ease-in-out ${(!fileQueue.length && !tableData) ? 'max-w-3xl' : 'max-w-[95rem]'}`}>
           <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-md">
             <div className="p-6">
               <AnimatePresence mode="wait" initial={false}>
@@ -289,7 +318,7 @@ const App: React.FC = () => {
                 // WORKSPACE - 30% Left, 70% Right
                 <motion.div key="workspace" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                   
-                  {/* Left Column: Preview (Takes 3/10 columns) */}
+                  {/* Left Column: Preview (30%) */}
                   <div className="lg:col-span-3 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-base font-semibold text-white flex items-center gap-2">
