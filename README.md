@@ -105,13 +105,13 @@ Frontend: Hosted on Vercel (Global CDN).
 Backend: Hosted on Render (Secure container).
 Security: app.py enforces CORS and Rate Limiting.
 
-### 👥 Authors & Credits
+ 👥 Authors & Credits
 
 Built for the Google AI Studio × Scaler Startup Competition 2025.
 
-**Team:**
+Team:
 - Chinmaygouda Patil – Full Stack Developer & AI Integration  
-- **Davana Hiremath H S (@Davanahs) – Product Strategy, UX Research & Community Outreach**
+- Davana Hiremath H S (@Davanahs) – Product Strategy, UX Research & Community Outreach
 
 
 Goal: To demonstrate the power of Multimodal AI in automating complex data entry workflows.
