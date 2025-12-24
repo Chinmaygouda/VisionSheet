@@ -142,11 +142,9 @@ const App: React.FC = () => {
             else masterData = mergeTableData(masterData, data);
         }
         setTableData(masterData);
-        setStatus(ProcessingStatus.IDLE);
         setMascotState('success');
     } catch (e) {
         setError("Failed to merge Excel files.");
-        setStatus(ProcessingStatus.ERROR);
         setMascotState('idle');
     }
   };
@@ -156,16 +154,17 @@ const App: React.FC = () => {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files); };
 
-  // --- HYBRID MERGE LOGIC (Updated for Side-by-Side Separator) ---
+  // --- HYBRID MERGE LOGIC (Side-by-Side or Vertical) ---
   const mergeTableData = (existing: ExtractedTableData, newTable: ExtractedTableData): ExtractedTableData => {
+    // 1. Analyze Similarity
     const headers1 = existing.headers.map(h => h.toLowerCase().trim()).sort().join('|');
     const headers2 = newTable.headers.map(h => h.toLowerCase().trim()).sort().join('|');
     
-    // Check if headers match (Vertical Stack)
+    // Check if headers are identical (or at least same content)
     const isSameStructure = headers1 === headers2;
 
     if (isSameStructure) {
-        // Vertical Merge
+        // --- CASE A: VERTICAL MERGE (Append Rows) ---
         const reorderedNewRows = newTable.rows.map(row => {
             return existing.headers.map(targetH => {
                 const idx = newTable.headers.findIndex(h => h.toLowerCase().trim() === targetH.toLowerCase().trim());
@@ -180,14 +179,23 @@ const App: React.FC = () => {
         };
 
     } else {
-        // Horizontal Side-by-Side Merge with Spacer
+        // --- CASE B: HORIZONTAL MERGE (Side-by-Side with Spacer) ---
+        
+        // 1. Headers: [Existing] + [Spacer] + [New]
         const combinedHeaders = [...existing.headers, "", ...newTable.headers];
+
+        // 2. Rows: Align side by side
         const maxRows = Math.max(existing.rows.length, newTable.rows.length);
         const combinedRows: string[][] = [];
 
         for (let i = 0; i < maxRows; i++) {
+            // Left Side (or blanks if short)
             const leftRow = existing.rows[i] || Array(existing.headers.length).fill("");
+            
+            // Right Side (or blanks if short)
             const rightRow = newTable.rows[i] || Array(newTable.headers.length).fill("");
+
+            // Combine with blank spacer
             combinedRows.push([...leftRow, "", ...rightRow]);
         }
 
@@ -265,14 +273,16 @@ const App: React.FC = () => {
             </motion.div>
             <div className="flex flex-col justify-center">
               <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 leading-none mb-0.5">VisionSheet</span>
-              <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase select-none pointer-events-none">Chinmaygouda Patil</span>
+              {/* UPDATED: Added Collaborator Name */}
+              <span className="text-[9px] text-slate-500 font-medium tracking-widest uppercase select-none pointer-events-none leading-tight">Chinmaygouda Patil</span>
+              <span className="text-[9px] text-slate-500 font-medium tracking-widest uppercase select-none pointer-events-none leading-tight">Davana Hiremath H S</span>
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-xs text-slate-400 hidden sm:flex items-center gap-2"><SparklesIcon className="w-3 h-3 text-amber-400 animate-pulse" />Powered by Gemini 2.5 Flash</motion.div>
         </div>
       </nav>
 
-      {/* Increased Top Padding for Robot */}
+      {/* INCREASED TOP PADDING (pt-14) to fix clipped robot */}
       <main className="flex-grow container mx-auto px-4 pt-14 pb-8 flex flex-col items-center relative z-10">
         
         {/* Large Title */}
