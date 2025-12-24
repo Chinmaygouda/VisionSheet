@@ -43,26 +43,76 @@ type MascotState = 'idle' | 'processing' | 'success' | 'celebrating';
 
 interface RoboMascotProps { layoutId: string; state: MascotState; className?: string; }
 
+// Robot Mascot (Fixed Animation)
 const RoboMascot: React.FC<RoboMascotProps> = ({ layoutId, state, className }) => {
+  // Define paths as constants to prevent "undefined" errors
+  const mouthIdle = "M46 58 Q50 60 54 58";
+  const mouthHappy = "M44 58 Q50 63 56 58";
+
   return (
-    <motion.div layoutId={layoutId} className={`z-50 pointer-events-none ${className}`} initial={false}
-      animate={state === 'celebrating' ? { y: [0, -30, 0], rotate: [0, 360, 0], scale: [1, 1.2, 1] } : { y: [0, -8, 0], rotate: state === 'processing' ? [0, 2, -2, 0] : [-2, 2, -2] }}
-      transition={state === 'celebrating' ? { duration: 0.8 } : { y: { duration: 3, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: state === 'processing' ? 0.5 : 4, repeat: Infinity } }}>
+    <motion.div 
+      layoutId={layoutId} 
+      className={`z-50 pointer-events-none ${className}`} 
+      initial={false}
+      animate={state === 'celebrating' ? { 
+        y: [0, -30, 0], rotate: [0, 360, 0], scale: [1, 1.2, 1] 
+      } : { 
+        y: [0, -8, 0], rotate: state === 'processing' ? [0, 2, -2, 0] : [-2, 2, -2] 
+      }}
+      transition={state === 'celebrating' ? { duration: 0.8 } : { 
+        y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+        rotate: { duration: state === 'processing' ? 0.5 : 4, repeat: Infinity }
+      }}
+    >
       <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_10px_20px_rgba(99,102,241,0.4)] overflow-visible">
         <defs>
-          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="100%" stopColor="#8b5cf6" />
+          </linearGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
+
+        {/* Antenna */}
         <motion.g animate={state === 'processing' ? { rotate: [-10, 10, -10] } : { rotate: [-5, 5, -5] }} style={{ originX: "50px", originY: "50px" }} transition={{ duration: state === 'processing' ? 0.2 : 2, repeat: Infinity }}>
           <line x1="50" y1="30" x2="50" y2="5" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" />
           <motion.circle cx="50" cy="5" r="4" fill={state === 'success' || state === 'celebrating' ? "#4ade80" : "#fbbf24"} filter="url(#glow)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }} />
         </motion.g>
+
+        {/* Body & Face */}
         <rect x="22" y="30" width="56" height="45" rx="14" fill="url(#bodyGrad)" stroke="#c4b5fd" strokeWidth="2" />
         <rect x="30" y="38" width="40" height="24" rx="8" fill="#1e1b4b" />
+
+        {/* Eyes */}
         <g fill="#22d3ee" filter="url(#glow)">
-          {state === 'success' || state === 'celebrating' ? (<g stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" fill="none"><path d="M36 50 Q40 45 44 50" /><path d="M56 50 Q60 45 64 50" /></g>) : (<><ellipse cx="42" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} /><ellipse cx="58" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} /></>)}
+          {state === 'success' || state === 'celebrating' ? (
+             <g stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" fill="none">
+                <path d="M36 50 Q40 45 44 50" /><path d="M56 50 Q60 45 64 50" />
+             </g>
+          ) : (
+            <>
+              <motion.ellipse cx="42" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} />
+              <motion.ellipse cx="58" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} />
+            </>
+          )}
         </g>
-        <motion.path d="M46 58 Q50 60 54 58" stroke="#22d3ee" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" animate={state === 'success' || state === 'celebrating' ? { d: "M44 58 Q50 63 56 58", opacity: 1 } : { d: "M46 58 Q50 60 54 58", opacity: 0.6 }} />
+
+        {/* Mouth (This was causing the error) */}
+        <motion.path 
+          initial={{ d: mouthIdle, opacity: 0.6 }}
+          animate={{ 
+            d: (state === 'success' || state === 'celebrating') ? mouthHappy : mouthIdle,
+            opacity: (state === 'success' || state === 'celebrating') ? 1 : 0.6
+          }}
+          stroke="#22d3ee" 
+          strokeWidth="1.5" 
+          strokeLinecap="round" 
+        />
+
+        {/* Hands */}
         <motion.circle cx="12" cy="55" r="9" fill="#6366f1" stroke="#c4b5fd" strokeWidth="1.5" animate={state === 'processing' ? { y: [5, -5, 5], x: [0, 2, 0] } : state === 'celebrating' ? { y: -15 } : { y: [3, -3, 3] }} transition={{ duration: state === 'processing' ? 0.3 : 1.5, repeat: Infinity, delay: 0.2 }} />
         <motion.circle cx="88" cy="55" r="9" fill="#6366f1" stroke="#c4b5fd" strokeWidth="1.5" animate={state === 'processing' ? { y: [-5, 5, -5], x: [0, -2, 0] } : state === 'celebrating' ? { y: -15 } : { y: [-3, 3, -3] }} transition={{ duration: state === 'processing' ? 0.3 : 1.5, repeat: Infinity, delay: 0.5 }} />
       </svg>
