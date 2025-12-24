@@ -17,7 +17,7 @@ const getApiUrl = () => {
   // 3. Vercel/Public (Users)
   // Point to Render Backend
   // REPLACE THIS WITH YOUR RENDER URL LATER
-  return 'https://visionsheet-backend.onrender.com/convert'; 
+  return 'https://visionsheet-backend.onrender.com'; 
 };
 
 export const extractTableFromImage = async (base64: string, fileType: string): Promise<ExtractedTableData> => {
