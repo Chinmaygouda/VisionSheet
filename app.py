@@ -3,20 +3,25 @@ import json
 import datetime
 import google.generativeai as genai
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+# 1. Import CORS
+from flask_cors import CORS 
 from PIL import Image
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Setup App to serve React build files (for Google Cloud)
 app = Flask(__name__, static_folder='templates/dist', static_url_path='/')
-CORS(app, resources={r"/*": {"origins": "*"}})
+
+# --- 2. THE STRONGER CORS FIX ---
+# This allows ANY website (origins="*") to send POST requests
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "X-Forwarded-For"])
 
 # --- API KEY & MODEL ---
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     print("❌ ERROR: API Key not found in Environment Variables!")
+
+# ... (The rest of your code stays the same) ...
 
 genai.configure(api_key=api_key)
 
