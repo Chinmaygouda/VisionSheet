@@ -17,7 +17,10 @@ import {
   PhotoIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  Square3Stack3DIcon
+  Square3Stack3DIcon,
+  Cog6ToothIcon,
+  KeyIcon,
+  ArrowLeftIcon // NEW ICON
 } from '@heroicons/react/24/outline';
 
 const LOADING_MESSAGES = [
@@ -28,7 +31,7 @@ const LOADING_MESSAGES = [
   "Finalizing Excel structure..."
 ];
 
-// Simple Background Particle
+// Background Particle
 const Particle: React.FC<{ delay: number; x: number }> = ({ delay, x }) => (
   <motion.div
     initial={{ y: "110vh", opacity: 0, scale: 0.5 }}
@@ -43,76 +46,30 @@ type MascotState = 'idle' | 'processing' | 'success' | 'celebrating';
 
 interface RoboMascotProps { layoutId: string; state: MascotState; className?: string; }
 
-// Robot Mascot (Fixed Animation)
+// Robot with Fixed SVG Paths
 const RoboMascot: React.FC<RoboMascotProps> = ({ layoutId, state, className }) => {
-  // Define paths as constants to prevent "undefined" errors
   const mouthIdle = "M46 58 Q50 60 54 58";
   const mouthHappy = "M44 58 Q50 63 56 58";
 
   return (
-    <motion.div 
-      layoutId={layoutId} 
-      className={`z-50 pointer-events-none ${className}`} 
-      initial={false}
-      animate={state === 'celebrating' ? { 
-        y: [0, -30, 0], rotate: [0, 360, 0], scale: [1, 1.2, 1] 
-      } : { 
-        y: [0, -8, 0], rotate: state === 'processing' ? [0, 2, -2, 0] : [-2, 2, -2] 
-      }}
-      transition={state === 'celebrating' ? { duration: 0.8 } : { 
-        y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-        rotate: { duration: state === 'processing' ? 0.5 : 4, repeat: Infinity }
-      }}
-    >
+    <motion.div layoutId={layoutId} className={`z-50 pointer-events-none ${className}`} initial={false}
+      animate={state === 'celebrating' ? { y: [0, -30, 0], rotate: [0, 360, 0], scale: [1, 1.2, 1] } : { y: [0, -8, 0], rotate: state === 'processing' ? [0, 2, -2, 0] : [-2, 2, -2] }}
+      transition={state === 'celebrating' ? { duration: 0.8 } : { y: { duration: 3, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: state === 'processing' ? 0.5 : 4, repeat: Infinity } }}>
       <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_10px_20px_rgba(99,102,241,0.4)] overflow-visible">
         <defs>
-          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#8b5cf6" />
-          </linearGradient>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#8b5cf6" /></linearGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-
-        {/* Antenna */}
         <motion.g animate={state === 'processing' ? { rotate: [-10, 10, -10] } : { rotate: [-5, 5, -5] }} style={{ originX: "50px", originY: "50px" }} transition={{ duration: state === 'processing' ? 0.2 : 2, repeat: Infinity }}>
           <line x1="50" y1="30" x2="50" y2="5" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" />
           <motion.circle cx="50" cy="5" r="4" fill={state === 'success' || state === 'celebrating' ? "#4ade80" : "#fbbf24"} filter="url(#glow)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }} />
         </motion.g>
-
-        {/* Body & Face */}
         <rect x="22" y="30" width="56" height="45" rx="14" fill="url(#bodyGrad)" stroke="#c4b5fd" strokeWidth="2" />
         <rect x="30" y="38" width="40" height="24" rx="8" fill="#1e1b4b" />
-
-        {/* Eyes */}
         <g fill="#22d3ee" filter="url(#glow)">
-          {state === 'success' || state === 'celebrating' ? (
-             <g stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" fill="none">
-                <path d="M36 50 Q40 45 44 50" /><path d="M56 50 Q60 45 64 50" />
-             </g>
-          ) : (
-            <>
-              <motion.ellipse cx="42" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} />
-              <motion.ellipse cx="58" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} />
-            </>
-          )}
+          {state === 'success' || state === 'celebrating' ? (<g stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" fill="none"><path d="M36 50 Q40 45 44 50" /><path d="M56 50 Q60 45 64 50" /></g>) : (<><ellipse cx="42" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} /><ellipse cx="58" cy="50" rx="4" ry={state === 'processing' ? 2 : 5} /></>)}
         </g>
-
-        {/* Mouth (This was causing the error) */}
-        <motion.path 
-          initial={{ d: mouthIdle, opacity: 0.6 }}
-          animate={{ 
-            d: (state === 'success' || state === 'celebrating') ? mouthHappy : mouthIdle,
-            opacity: (state === 'success' || state === 'celebrating') ? 1 : 0.6
-          }}
-          stroke="#22d3ee" 
-          strokeWidth="1.5" 
-          strokeLinecap="round" 
-        />
-
-        {/* Hands */}
+        <motion.path initial={{ d: mouthIdle }} animate={{ d: (state === 'success' || state === 'celebrating') ? mouthHappy : mouthIdle }} stroke="#22d3ee" strokeWidth="1.5" strokeLinecap="round" />
         <motion.circle cx="12" cy="55" r="9" fill="#6366f1" stroke="#c4b5fd" strokeWidth="1.5" animate={state === 'processing' ? { y: [5, -5, 5], x: [0, 2, 0] } : state === 'celebrating' ? { y: -15 } : { y: [3, -3, 3] }} transition={{ duration: state === 'processing' ? 0.3 : 1.5, repeat: Infinity, delay: 0.2 }} />
         <motion.circle cx="88" cy="55" r="9" fill="#6366f1" stroke="#c4b5fd" strokeWidth="1.5" animate={state === 'processing' ? { y: [-5, 5, -5], x: [0, -2, 0] } : state === 'celebrating' ? { y: -15 } : { y: [-3, 3, -3] }} transition={{ duration: state === 'processing' ? 0.3 : 1.5, repeat: Infinity, delay: 0.5 }} />
       </svg>
@@ -133,6 +90,9 @@ const App: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [mascotState, setMascotState] = useState<MascotState>('idle');
   
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState(localStorage.getItem('visionSheet_apiKey') || '');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const mergeExcelRef = useRef<HTMLInputElement>(null);
@@ -145,6 +105,12 @@ const App: React.FC = () => {
     }
     return () => clearInterval(interval);
   }, [status]);
+
+  const handleSaveKey = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setApiKey(val);
+    localStorage.setItem('visionSheet_apiKey', val);
+  };
 
   const handleFileSelect = (files: FileList) => {
     const validFiles: File[] = [];
@@ -192,9 +158,11 @@ const App: React.FC = () => {
             else masterData = mergeTableData(masterData, data);
         }
         setTableData(masterData);
+        setStatus(ProcessingStatus.IDLE);
         setMascotState('success');
     } catch (e) {
         setError("Failed to merge Excel files.");
+        setStatus(ProcessingStatus.ERROR);
         setMascotState('idle');
     }
   };
@@ -204,56 +172,29 @@ const App: React.FC = () => {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files); };
 
-  // --- HYBRID MERGE LOGIC (Side-by-Side or Vertical) ---
   const mergeTableData = (existing: ExtractedTableData, newTable: ExtractedTableData): ExtractedTableData => {
-    // 1. Analyze Similarity
     const headers1 = existing.headers.map(h => h.toLowerCase().trim()).sort().join('|');
     const headers2 = newTable.headers.map(h => h.toLowerCase().trim()).sort().join('|');
-    
-    // Check if headers are identical (or at least same content)
     const isSameStructure = headers1 === headers2;
 
     if (isSameStructure) {
-        // --- CASE A: VERTICAL MERGE (Append Rows) ---
-        const reorderedNewRows = newTable.rows.map(row => {
+        const reorderedRows = newTable.rows.map(row => {
             return existing.headers.map(targetH => {
                 const idx = newTable.headers.findIndex(h => h.toLowerCase().trim() === targetH.toLowerCase().trim());
                 return idx !== -1 ? row[idx] : "";
             });
         });
-
-        return {
-            headers: existing.headers,
-            rows: [...existing.rows, ...reorderedNewRows],
-            summary: existing.summary
-        };
-
+        return { headers: existing.headers, rows: [...existing.rows, ...reorderedRows], summary: existing.summary };
     } else {
-        // --- CASE B: HORIZONTAL MERGE (Side-by-Side with Spacer) ---
-        
-        // 1. Headers: [Existing] + [Spacer] + [New]
         const combinedHeaders = [...existing.headers, "", ...newTable.headers];
-
-        // 2. Rows: Align side by side
         const maxRows = Math.max(existing.rows.length, newTable.rows.length);
         const combinedRows: string[][] = [];
-
         for (let i = 0; i < maxRows; i++) {
-            // Left Side (or blanks if short)
             const leftRow = existing.rows[i] || Array(existing.headers.length).fill("");
-            
-            // Right Side (or blanks if short)
             const rightRow = newTable.rows[i] || Array(newTable.headers.length).fill("");
-
-            // Combine with blank spacer
             combinedRows.push([...leftRow, "", ...rightRow]);
         }
-
-        return {
-            headers: combinedHeaders,
-            rows: combinedRows,
-            summary: existing.summary + " | " + (newTable.summary || "New Data")
-        };
+        return { headers: combinedHeaders, rows: combinedRows, summary: existing.summary + " | " + (newTable.summary || "New Data") };
     }
   };
 
@@ -278,15 +219,40 @@ const App: React.FC = () => {
       setFileQueue([]); 
       setPreviewUrls([]);
     } catch (err: any) {
-      console.error(err); 
-      setError(err.message || "Failed."); 
-      setStatus(ProcessingStatus.ERROR); 
-      setMascotState('idle');
+        console.error(err);
+        if (err.message === "QUOTA_EXCEEDED") {
+            setError("Free limit reached! Click ⚙️ to add your own API Key.");
+            setShowSettings(true);
+        } else {
+            setError(err.message || "Failed.");
+        }
+        setStatus(ProcessingStatus.ERROR); 
+        setMascotState('idle');
     }
   };
 
   const nextPreview = () => setViewIndex(prev => (prev + 1) % previewUrls.length);
   const prevPreview = () => setViewIndex(prev => (prev - 1 + previewUrls.length) % previewUrls.length);
+
+  // --- NEW: STEP-BY-STEP BACK BUTTON LOGIC ---
+  const handleBack = () => {
+    if (tableData) {
+      // Step 3 -> Step 2: Clear Data, Go back to Preview/Processing screen
+      // If we processed images, we want to go back to the "Add Images" state (empty queue for new add)
+      // Or if we came from fileQueue, we might want to keep them. 
+      // For simplicity: Clear Table, Reset Status.
+      setTableData(null);
+      setStatus(ProcessingStatus.IDLE);
+      setMascotState('idle');
+    } else if (fileQueue.length > 0) {
+      // Step 2 -> Step 1: Clear Images, Go back to Upload Screen
+      setFileQueue([]);
+      setPreviewUrls([]);
+      setViewIndex(0);
+      setError(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleReset = () => {
     setFileQueue([]); setPreviewUrls([]); setTableData(null); 
@@ -308,7 +274,6 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0B1121] text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden relative">
       
-      {/* Static Background */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-[#0B1121]" />
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#6366f1 1px, transparent 1px), linear-gradient(90deg, #6366f1 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -323,19 +288,40 @@ const App: React.FC = () => {
             </motion.div>
             <div className="flex flex-col justify-center">
               <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400 leading-none mb-0.5">VisionSheet</span>
-              {/* UPDATED: Added Collaborator Name */}
               <span className="text-[9px] text-slate-500 font-medium tracking-widest uppercase select-none pointer-events-none leading-tight">Chinmaygouda Patil</span>
               <span className="text-[9px] text-slate-500 font-medium tracking-widest uppercase select-none pointer-events-none leading-tight">Davana Hiremath H S</span>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-xs text-slate-400 hidden sm:flex items-center gap-2"><SparklesIcon className="w-3 h-3 text-amber-400 animate-pulse" />Powered by Gemini 2.5 Flash</motion.div>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setShowSettings(!showSettings)} className={`text-slate-400 hover:text-white transition-colors ${apiKey ? 'text-emerald-400' : ''}`} title="Settings">
+              <Cog6ToothIcon className="w-5 h-5"/>
+            </button>
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-xs text-slate-400 hidden sm:flex items-center gap-2"><SparklesIcon className="w-3 h-3 text-amber-400 animate-pulse" />Powered by Gemini 2.5 Flash</motion.div>
+          </div>
         </div>
       </nav>
 
-      {/* INCREASED TOP PADDING (pt-14) to fix clipped robot */}
+      {/* SETTINGS PANEL */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full bg-slate-900 border-b border-slate-800 overflow-hidden relative z-40">
+            <div className="container mx-auto px-4 py-4 max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg"><KeyIcon className="w-5 h-5 text-indigo-400" /></div>
+                <div><h3 className="text-sm font-semibold text-white">Bring Your Own Key</h3><p className="text-xs text-slate-400">Paste your Gemini API Key to bypass daily limits (Free).</p></div>
+              </div>
+              <div className="flex-1 w-full sm:w-auto flex gap-2">
+                <input type="password" value={apiKey} onChange={handleSaveKey} onKeyDown={(e) => e.key === 'Enter' && setShowSettings(false)} placeholder="AIzaSy..." className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 outline-none transition-all placeholder:text-slate-600"/>
+                <button onClick={() => setShowSettings(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg">Save</button>
+              </div>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300 underline whitespace-nowrap">Get Key →</a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="flex-grow container mx-auto px-4 pt-14 pb-8 flex flex-col items-center relative z-10">
         
-        {/* Large Title */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-4xl mb-8 relative z-20">
           <div className="relative inline-block">
             {mascotState === 'idle' && <RoboMascot layoutId="mascot" state={mascotState} className="absolute -top-10 -right-6 w-16 h-16" />}
@@ -349,7 +335,17 @@ const App: React.FC = () => {
         {/* --- MAIN CONTAINER --- */}
         <div className={`w-full relative transition-all duration-500 ease-in-out ${(!fileQueue.length && !tableData) ? 'max-w-3xl' : 'max-w-[95rem]'}`}>
           <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-md">
-            <div className="p-6">
+            
+            {/* BACK BUTTON (Only visible if not on initial screen) */}
+            {(fileQueue.length > 0 || tableData) && status !== ProcessingStatus.PROCESSING && (
+                <div className="absolute top-4 left-4 z-20">
+                    <button onClick={handleBack} className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
+                        <ArrowLeftIcon className="w-4 h-4" /> Back
+                    </button>
+                </div>
+            )}
+
+            <div className="p-6 pt-12"> {/* Added top padding for back button space */}
               <AnimatePresence mode="wait" initial={false}>
               {!fileQueue.length && !tableData ? (
                 // INITIAL UPLOAD SCREEN
@@ -375,7 +371,7 @@ const App: React.FC = () => {
                     </div>
                 </motion.div>
               ) : (
-                // WORKSPACE - 30% Left, 70% Right
+                // WORKSPACE
                 <motion.div key="workspace" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                   
                   {/* Left Column: Preview (30%) */}
@@ -385,7 +381,7 @@ const App: React.FC = () => {
                         <div className="w-1.5 h-5 bg-indigo-500 rounded-full"></div>
                         {fileQueue.length > 0 ? `Image ${viewIndex + 1} / ${fileQueue.length}` : 'Processing Complete'}
                       </h3>
-                      {(status !== ProcessingStatus.PROCESSING && tableData) && (<button onClick={handleReset} className="text-xs text-slate-400 hover:text-red-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-700/50"><XMarkIcon className="h-3 w-3" /> Reset</button>)}
+                      {(status !== ProcessingStatus.PROCESSING && tableData) && (<button onClick={handleReset} className="text-xs text-slate-400 hover:text-red-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-700/50"><XMarkIcon className="h-3 w-3" /> Reset All</button>)}
                     </div>
                     
                     {fileQueue.length > 0 ? (
@@ -422,7 +418,7 @@ const App: React.FC = () => {
                     {error && <div className="w-full p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400">{error}</div>}
                   </div>
 
-                  {/* Right Column: Data (Takes 7/10 columns) */}
+                  {/* Right Column: Data (70%) - Fixed Height with Scroll */}
                   <div className="lg:col-span-7 flex flex-col gap-4 h-full">
                      <div className="flex items-center justify-between">
                       <h3 className="text-base font-semibold text-white flex items-center gap-2"><div className="w-1.5 h-5 bg-emerald-500 rounded-full"></div>Extracted Data</h3>
@@ -438,7 +434,7 @@ const App: React.FC = () => {
                         <div className="flex-grow overflow-y-auto custom-scrollbar">
                           <table className="w-full text-xs text-left text-slate-300">
                             <thead className="text-[10px] uppercase bg-slate-800 text-slate-400 sticky top-0 z-10 shadow-sm"><tr>{tableData.headers.map((header, idx) => <th key={idx} className="px-4 py-3 border-b border-slate-700 whitespace-nowrap font-semibold tracking-wider bg-slate-800">{header}</th>)}</tr></thead>
-                            <tbody>{tableData.rows.map((row, rowIdx) => <tr key={rowIdx} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors group">{row.map((cell, cellIdx) => <td key={cellIdx} className="px-4 py-2 whitespace-nowrap group-hover:text-white">{cell}</td>)}</tr>)}</tbody>
+                            <tbody>{tableData.rows.map((row, rowIdx) => <tr key={rowIdx} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors group">{row.map((cell, cellIdx) => <td key={cellIdx} className="px-4 py-2 whitespace-nowrap group-hover:text-white border-r border-slate-700/50 last:border-r-0">{cell}</td>)}</tr>)}</tbody>
                           </table>
                         </div>
                       )}
